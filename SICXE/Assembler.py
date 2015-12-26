@@ -11,5 +11,8 @@ class Assembler:
                 if re.match('^\s*$', i):
                     self.__source.remove(i)
 
+    def __parse(self, line):
+        pass
+
 
 sys.modules[__name__] = Assembler
