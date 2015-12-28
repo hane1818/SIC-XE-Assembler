@@ -10,6 +10,7 @@ class Assembler:
             for i in self.__source:
                 if re.match('^\s*$', i):
                     self.__source.remove(i)
+        fin.close()
 
     __REGISTERS = {
         'A': 0, 'X': 1, 'L': 2, 'PC': 8, 'SW': 9
@@ -42,6 +43,23 @@ class Assembler:
         "TIXR": {'opcode': '0xb8', 'format': 2},
         "WD": {'opcode': '0xdc', 'format': 3}
     }
+
+    def load_operators(self, filename):
+        fin = open(filename, 'r', encoding='utf-8-sig')
+        op_table = fin.read()
+        fin.close()
+        op_table = op_table.split('|')
+        pattern = re.compile('^\s*(?P<opname>\w+?)\s+?(?P<opcode>.+?)\s+?(?P<format>\d+?).*?\s*?$')
+        operators = dict()
+        for op in op_table:
+            match = pattern.match(op)
+            if match:
+                if match.group('opname') in operators.keys():
+                    raise Exception("Error: Repetitive operator definition.")
+                operators[match.group('opname')] = {'opcode': match.group('opcode'), 'format': match.group('format')}
+            op_table.remove(op)
+
+        self.__OPERATORS = operators
 
     def __parse(self, line):
         pass
