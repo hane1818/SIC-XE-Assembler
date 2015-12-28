@@ -11,5 +11,9 @@ class TestAssembler(unittest.TestCase):
         self.assertIsNotNone(self.asm.source, "Can't read file")
     """
 
+    def test_load_operators(self):
+        self.assertIsNotNone(self.asm.load_operators('Operators.dat'))
+        print(self.asm.load_operators('Operators.dat'))
+
 if __name__ == "__main__":
     unittest.main()
