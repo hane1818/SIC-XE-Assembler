@@ -44,6 +44,12 @@ class Assembler:
         "WD": {'opcode': '0xdc', 'format': 3}
     }
 
+    def append_operator(self, opname, opcode, opformat):
+        if opname not in self.__OPERATORS:
+            self.__OPERATORS[opname] = {'opcode': opcode, 'format': opformat}
+            return {opname: self.__OPERATORS[opname]}
+        return dict()
+
     def load_operators(self, filename):
         fin = open(filename, 'r', encoding='utf-8-sig')
         op_table = fin.read()
