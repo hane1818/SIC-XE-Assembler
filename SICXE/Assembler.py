@@ -7,9 +7,12 @@ class Assembler:
         fin = open(filename, 'r', encoding="utf-8-sig")
         if fin:
             self.__source = fin.read().split('\n')
-            for i in self.__source:
-                if re.match('^\s*$', i):
-                    self.__source.remove(i)
+            self.__source = [self.__parse(i) for i in self.__source]
+            while True:
+                try:
+                    self.__source.remove(None)
+                except:
+                    break
         fin.close()
 
     __REGISTERS = {
@@ -74,6 +77,26 @@ class Assembler:
                 return True
             return False
 
+        def is_code():
+            symbol = '^\s*((?P<symbol>\w+)\s+)?'
+            operator = '|'.join(list(self.__OPERATORS.keys()) + self.__DIRECTIVES)
+            operator = '(?P<operator>{}+?)?'.format(operator)
+            operand = '(\s+(?P<operand>(\S+(\s*,\s*\S+)?)))?\s*$'
+            rule = re.compile(symbol+operator+operand)
+            if rule.match(line):
+                return {'symbol': rule.match(line).group('symbol'),
+                        'operator': rule.match(line).group('operator'),
+                        'operand': rule.match(line).group('operand')}
+            return False
+
+        def is_space():
+            if re.match('^\s*$', line):
+                return True
+            return False
+
+        if not is_comment() and is_code() and not is_space():
+            return is_code()
+        return None
 
 
 sys.modules[__name__] = Assembler
