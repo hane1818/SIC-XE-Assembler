@@ -80,7 +80,7 @@ class Assembler:
         def is_code():
             symbol = '^\s*((?P<symbol>\w+)\s+)?'
             operator = '|'.join(list(self.__OPERATORS.keys()) + self.__DIRECTIVES)
-            operator = '(?P<operator>{}+?)?'.format(operator)
+            operator = '(?P<operator>\+?({}))'.format(operator)
             operand = '(\s+(?P<operand>(\S+(\s*,\s*\S+)?)))?\s*$'
             rule = re.compile(symbol+operator+operand)
             if rule.match(line):
