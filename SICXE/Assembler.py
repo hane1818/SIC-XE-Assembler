@@ -69,7 +69,11 @@ class Assembler:
         return operators
 
     def __parse(self, line):
-        pass
+        def is_comment():
+            if re.match('^\s*\..*', line):
+                return True
+            return False
+
 
 
 sys.modules[__name__] = Assembler
