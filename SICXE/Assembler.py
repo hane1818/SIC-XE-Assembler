@@ -51,15 +51,16 @@ class Assembler:
         op_table = op_table.split('|')
         pattern = re.compile('^\s*((?P<opname>\w+?)\s*)?,\s*((?P<opcode>.+?)\s*)?,\s*((?P<format>\d+?)\s*)?$')
         operators = dict()
+
         for op in op_table:
             match = pattern.match(op)
             if match:
-                if match.group('opname') in operators.keys():
-                    raise Exception("Error: Repetitive operator definition.")
-                operators[match.group('opname')] = {'opcode': match.group('opcode'), 'format': match.group('format')}
+                operators[match.group('opname')] = {'opcode': hex(int(match.group('opcode'), 16)),
+                                                    'format': int(match.group('format'))}
             op_table.remove(op)
 
         self.__OPERATORS = operators
+        return operators
 
     def __parse(self, line):
         pass
