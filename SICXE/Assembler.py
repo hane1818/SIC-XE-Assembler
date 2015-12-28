@@ -16,6 +16,10 @@ class Assembler:
         'B': 3, 'S': 4, 'T': 5, 'F': 6,
     }
 
+    __DIRECTIVES = [
+        "START", "END", "BYTE", "WORD", "RESB", "RESW"
+    ]
+
     def __parse(self, line):
         pass
 
