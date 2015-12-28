@@ -71,6 +71,9 @@ class Assembler:
         self.__OPERATORS = operators
         return operators
 
+    def two_pass(self):
+        pass
+
     def __parse(self, line):
         def is_comment():
             if re.match('^\s*\..*', line):
