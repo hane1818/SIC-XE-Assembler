@@ -49,7 +49,7 @@ class Assembler:
         op_table = fin.read()
         fin.close()
         op_table = op_table.split('|')
-        pattern = re.compile('^\s*(?P<opname>\w+?)\s+?(?P<opcode>.+?)\s+?(?P<format>\d+?).*?\s*?$')
+        pattern = re.compile('^\s*((?P<opname>\w+?)\s*)?,\s*((?P<opcode>.+?)\s*)?,\s*((?P<format>\d+?)\s*)?$')
         operators = dict()
         for op in op_table:
             match = pattern.match(op)
