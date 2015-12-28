@@ -11,6 +11,11 @@ class Assembler:
                 if re.match('^\s*$', i):
                     self.__source.remove(i)
 
+    __REGISTERS = {
+        'A': 0, 'X': 1, 'L': 2, 'PC': 8, 'SW': 9
+        'B': 3, 'S': 4, 'T': 5, 'F': 6,
+    }
+
     def __parse(self, line):
         pass
 
