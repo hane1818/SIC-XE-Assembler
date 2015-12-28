@@ -12,8 +12,14 @@ class TestAssembler(unittest.TestCase):
     """
 
     def test_load_operators(self):
-        self.assertIsNotNone(self.asm.load_operators('Operators.dat'))
-        print(self.asm.load_operators('Operators.dat'))
+        load_op = self.asm.load_operators('Operators.dat')
+        self.assertIsNotNone(load_op)
+        print(load_op)
+
+    def test_append_operator(self):
+        add_op = self.asm.append_operator('ADD', '0x18', 3)
+        self.assertIsNotNone(add_op)
+        print(add_op)
 
 if __name__ == "__main__":
     unittest.main()
