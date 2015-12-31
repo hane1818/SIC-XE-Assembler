@@ -145,4 +145,9 @@ class Assembler:
                 line['operand'] = line['operand'].upper()
         return line
 
+    def __constant(self, value):
+        pattern = re.compile("(?P<type>(C|c|X|x))\s*\'(?P<val>.+)\'")
+        if pattern.match(value):
+            value = pattern.match(value).groupdict()
+
 sys.modules[__name__] = Assembler
