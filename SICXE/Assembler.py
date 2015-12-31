@@ -16,7 +16,7 @@ class Assembler:
                 except ValueError:
                     break
         fin.close()
-        self.__symbols = {}
+        self.__Symbols = {}
         self.__begin_loc = 0
         self.__title = None
 
@@ -81,7 +81,21 @@ class Assembler:
         return operators
 
     def two_pass(self):
-        pass
+        def pass_1():
+            loc_ctr = 0
+
+            if self.__source[0]['operator'] == 'START':
+                self.__begin_loc = self.__source[0]['operand']
+                if not self.__begin_loc:
+                    raise TypeError("START takes exactly one argument (0 given)")
+                loc_ctr = self.__begin_loc
+
+            for line in self.__source:
+                if line['symbol']:
+                    symbol = line['symbol']
+                    if symbol in self.__Symbols:
+                        raise KeyError("Duplicate symbol {}".format(symbol))
+                    self.__Symbols[symbol] = loc_ctr
 
     def __parse(self, line):
         def is_comment():
