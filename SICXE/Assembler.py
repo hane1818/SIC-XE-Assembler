@@ -148,6 +148,22 @@ class Assembler:
     def __constant(self, value):
         pattern = re.compile("(?P<type>(C|c|X|x))\s*\'(?P<val>.+)\'")
         if pattern.match(value):
-            value = pattern.match(value).groupdict()
+            const = pattern.match(value).groupdict()
+        else:
+            raise TypeError("invalid format for constant: {}".format(value))
+        result = ""
+        if const['type'].upper() == 'C':
+            for c in const['val']:
+                result += "{:02X}".format(ord(c))
+        else:
+            if len(const['val']) % 2 != 0:
+                raise ValueError("invalid constant value length")
+            else:
+                try:
+                    int(const['val'], 16)
+                except ValueError:
+                    raise ValueError("invalid constant value with base 16: {}".format(const['val']))
+                result = const['val'].upper()
+        return result
 
 sys.modules[__name__] = Assembler
