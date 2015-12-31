@@ -50,6 +50,10 @@ class Assembler:
         "WD": {'opcode': '0xdc', 'format': 3}
     }
 
+    @property
+    def source(self):
+        return self.__source
+
     def append_operator(self, opname, opcode, opformat):
         if opname not in self.__OPERATORS:
             self.__OPERATORS[opname] = {'opcode': opcode, 'format': opformat}
