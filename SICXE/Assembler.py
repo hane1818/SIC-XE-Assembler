@@ -8,6 +8,7 @@ class Assembler:
         if fin:
             self.__source = fin.read().split('\n')
             self.__source = [self.__parse(i) for i in self.__source]
+            self.__source = [self.__uppercase(i) for i in self.__source]
             while True:
                 try:
                     self.__source.remove(None)
@@ -108,5 +109,14 @@ class Assembler:
             return is_code()
         return None
 
+    def __uppercase(self, line):
+        if line:
+            if line['symbol']:
+                line['symbol'] = line['symbol'].upper()
+            if line['operator']:
+                line['operator'] = line['operator'].upper()
+            if line['operand']:
+                line['operand'] = line['operand'].upper()
+        return line
 
 sys.modules[__name__] = Assembler
