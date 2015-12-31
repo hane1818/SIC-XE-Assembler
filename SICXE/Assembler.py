@@ -14,6 +14,9 @@ class Assembler:
                 except:
                     break
         fin.close()
+        self.__symbols = {}
+        self.__begin_loc = 0
+        self.__title = None
 
     __REGISTERS = {
         'A': 0, 'X': 1, 'L': 2, 'PC': 8, 'SW': 9,
