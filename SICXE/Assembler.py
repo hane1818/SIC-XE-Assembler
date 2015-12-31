@@ -97,6 +97,17 @@ class Assembler:
                         raise KeyError("Duplicate symbol {}".format(symbol))
                     self.__Symbols[symbol] = loc_ctr
 
+                operator = line['operator']
+                if operator in self.__DIRECTIVES:
+                    if operator == 'WORD':
+                        loc_ctr += 3
+                    elif operator == 'RESW':
+                        loc_ctr += int(line['operand']) * 3
+                    elif operator == 'RESB':
+                        loc_ctr += int(line['operand'])
+                    elif operator == 'BYTE':
+                        pass
+
     def __parse(self, line):
         def is_comment():
             if re.match('^\s*\..*', line):
