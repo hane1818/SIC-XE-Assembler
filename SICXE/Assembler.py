@@ -11,7 +11,7 @@ class Assembler:
             while True:
                 try:
                     self.__source.remove(None)
-                except:
+                except ValueError:
                     break
         fin.close()
         self.__symbols = {}
