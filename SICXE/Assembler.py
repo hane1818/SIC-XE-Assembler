@@ -106,7 +106,16 @@ class Assembler:
                     elif operator == 'RESB':
                         loc_ctr += int(line['operand'])
                     elif operator == 'BYTE':
+                        loc_ctr += (self.__constant(line['operand']))
+                    else:
                         pass
+                elif operator in self.__OPERATORS:
+                    loc_ctr += self.__OPERATORS[operator]['format']
+                elif operator[0] == '+' and operator[1:] in self.__OPERATORS:
+                    if self.__OPERATORS[operator[1:]] == 3:
+                        loc_ctr += 4
+                    else:
+                        raise SyntaxError("invalid operator format from {} to 4".format(self.__OPERATORS[operator[1:]]))
 
     def __parse(self, line):
         def is_comment():
