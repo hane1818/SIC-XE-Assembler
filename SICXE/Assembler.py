@@ -2,6 +2,7 @@ import sys
 import re
 
 
+# noinspection PyMethodMayBeStatic
 class Assembler:
     def __init__(self, filename):
         fin = open(filename, 'r', encoding="utf-8-sig")
