@@ -19,5 +19,8 @@ class TestAssembler(unittest.TestCase):
         self.assertIsNotNone(add_op)
         print(add_op)
 
+    def test_operator_table(self):
+        print(self.asm.OPTAB)
+
 if __name__ == "__main__":
     unittest.main()
