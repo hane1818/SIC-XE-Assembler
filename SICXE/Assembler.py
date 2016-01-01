@@ -60,6 +60,10 @@ class Assembler:
     def SYMTAB(self):
         return self.__Symbols
 
+    @property
+    def OPTAB(self):
+        return self.__OPERATORS
+
     def append_operator(self, opname, opcode, opformat):
         if opname not in self.__OPERATORS:
             self.__OPERATORS[opname] = {'opcode': opcode, 'format': opformat}
