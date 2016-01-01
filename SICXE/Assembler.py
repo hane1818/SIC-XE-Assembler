@@ -56,6 +56,10 @@ class Assembler:
     def source(self):
         return self.__source
 
+    @property
+    def SYMTAB(self):
+        return self.__Symbols
+
     def append_operator(self, opname, opcode, opformat):
         if opname not in self.__OPERATORS:
             self.__OPERATORS[opname] = {'opcode': opcode, 'format': opformat}
@@ -85,8 +89,8 @@ class Assembler:
             loc_ctr = 0
 
             if self.__source[0]['operator'] == 'START':
-                self.__begin_loc = self.__source[0]['operand']
-                if not self.__begin_loc:
+                self.__begin_loc = int(self.__source[0]['operand'])
+                if self.__begin_loc is None:
                     raise TypeError("START takes exactly one argument (0 given)")
                 loc_ctr = self.__begin_loc
 
@@ -95,7 +99,7 @@ class Assembler:
                     symbol = line['symbol']
                     if symbol in self.__Symbols:
                         raise KeyError("Duplicate symbol {}".format(symbol))
-                    self.__Symbols[symbol] = loc_ctr
+                    self.__Symbols[symbol] = "{:04X}".format(loc_ctr)
 
                 operator = line['operator']
                 if operator in self.__DIRECTIVES:
@@ -106,16 +110,17 @@ class Assembler:
                     elif operator == 'RESB':
                         loc_ctr += int(line['operand'])
                     elif operator == 'BYTE':
-                        loc_ctr += (self.__constant(line['operand']))
+                        loc_ctr += len(self.__constant(line['operand'])) // 2
                     else:
                         pass
                 elif operator in self.__OPERATORS:
-                    loc_ctr += self.__OPERATORS[operator]['format']
+                    loc_ctr += int(self.__OPERATORS[operator]['format'])
                 elif operator[0] == '+' and operator[1:] in self.__OPERATORS:
-                    if self.__OPERATORS[operator[1:]] == 3:
+                    if self.__OPERATORS[operator[1:]]['format'] == 3:
                         loc_ctr += 4
                     else:
                         raise SyntaxError("invalid operator format from {} to 4".format(self.__OPERATORS[operator[1:]]))
+        pass_1()
 
     def __parse(self, line):
         def is_comment():
