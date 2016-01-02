@@ -184,4 +184,11 @@ class Assembler:
                 result = const['val'].upper()
         return result
 
+    class Record:
+        def __init__(self):
+            self.header = ""
+            self.end = ""
+            self.text = []
+            self.modify = []
+
 sys.modules[__name__] = Assembler
