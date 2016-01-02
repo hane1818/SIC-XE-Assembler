@@ -2,14 +2,13 @@ import sys
 import re
 
 
-# noinspection PyMethodMayBeStatic
 class Assembler:
     def __init__(self, filename):
         fin = open(filename, 'r', encoding="utf-8-sig")
         if fin:
             self.__source = fin.read().split('\n')
             self.__source = [self.__parse(i) for i in self.__source]
-            self.__source = [self.__uppercase(i) for i in self.__source]
+            self.__source = [uppercase(i) for i in self.__source]
             while True:
                 try:
                     self.__source.remove(None)
@@ -117,7 +116,7 @@ class Assembler:
                     elif operator == 'RESB':
                         loc_ctr += int(line['operand'])
                     elif operator == 'BYTE':
-                        loc_ctr += len(self.__constant(line['operand'])) // 2
+                        loc_ctr += len(constant(line['operand'])) // 2
                     else:
                         pass
                 elif operator in self.__OPERATORS:
@@ -174,7 +173,7 @@ class Assembler:
                     if operator == 'BASE':
                         self.__base = self.__Symbols[operand]
                     elif operator == 'BYTE':
-                        opvalue = self.__constant(operand)
+                        opvalue = constant(operand)
                     elif operator == 'END':
                         # write end record
                         pass
@@ -212,42 +211,46 @@ class Assembler:
             return is_code()
         return None
 
-    def __uppercase(self, line):
-        if line:
-            if line['symbol']:
-                line['symbol'] = line['symbol'].upper()
-            if line['operator']:
-                line['operator'] = line['operator'].upper()
-            if line['operand']:
-                line['operand'] = line['operand'].upper()
-        return line
-
-    def __constant(self, value):
-        pattern = re.compile("(?P<type>(C|c|X|x))\s*\'(?P<val>.+)\'")
-        if pattern.match(value):
-            const = pattern.match(value).groupdict()
-        else:
-            raise TypeError("invalid format for constant: {}".format(value))
-        result = ""
-        if const['type'].upper() == 'C':
-            for c in const['val']:
-                result += "{:02X}".format(ord(c))
-        else:
-            if len(const['val']) % 2 != 0:
-                raise ValueError("invalid constant value length")
-            else:
-                try:
-                    int(const['val'], 16)
-                except ValueError:
-                    raise ValueError("invalid constant value with base 16: {}".format(const['val']))
-                result = const['val'].upper()
-        return result
-
     class Record:
         def __init__(self):
             self.header = ""
             self.end = ""
             self.text = []
             self.modify = []
+
+
+# Helper function (not to be exported)
+def constant(value):
+    pattern = re.compile("(?P<type>(C|c|X|x))\s*\'(?P<val>.+)\'")
+    if pattern.match(value):
+        const = pattern.match(value).groupdict()
+    else:
+        raise TypeError("invalid format for constant: {}".format(value))
+    result = ""
+    if const['type'].upper() == 'C':
+        for c in const['val']:
+            result += "{:02X}".format(ord(c))
+    else:
+        if len(const['val']) % 2 != 0:
+            raise ValueError("invalid constant value length")
+        else:
+            try:
+                int(const['val'], 16)
+            except ValueError:
+                raise ValueError("invalid constant value with base 16: {}".format(const['val']))
+            result = const['val'].upper()
+    return result
+
+
+def uppercase(line):
+    if line:
+        if line['symbol']:
+            line['symbol'] = line['symbol'].upper()
+        if line['operator']:
+            line['operator'] = line['operator'].upper()
+        if line['operand']:
+            line['operand'] = line['operand'].upper()
+    return line
+
 
 sys.modules[__name__] = Assembler
