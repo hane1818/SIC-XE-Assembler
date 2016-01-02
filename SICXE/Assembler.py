@@ -19,6 +19,7 @@ class Assembler:
         self.__Symbols = {}
         self.__begin_loc = 0
         self.__title = None
+        self.__program = self.Record()
 
     __REGISTERS = {
         'A': 0, 'X': 1, 'L': 2, 'PC': 8, 'SW': 9,
