@@ -19,6 +19,7 @@ class Assembler:
         self.__Symbols = {}
         self.__begin_loc = 0
         self.__title = None
+        self.__base = None
         self.__program = self.Record()
 
     __REGISTERS = {
@@ -126,7 +127,64 @@ class Assembler:
                         loc_ctr += 4
                     else:
                         raise SyntaxError("invalid operator format from {} to 4".format(self.__OPERATORS[operator[1:]]))
+
+        def pass_2():
+            self.__title = self.__source[0]['symbol'] if self.__source[0]['operator'] == 'START' else None
+            # write header record
+
+            for line in self.__source:
+                operator, operand, location = line['operator'], line['operand'], line['loc']
+                flag_ni = '11'          # default n=1, i=1
+                flag__xbpe = '0000'     # default x, b, p, e = 0, 0 , 0, 0
+                if operator in self.__OPERATORS:
+                    operand_pair = re.compile("(?P<operand1>\w+)\s*,?\s*(?P<operand2>\w+)?")
+                    if self.__OPERATORS[operator]['format'] == 2:
+                        operands = operand_pair.match(operand).groups()
+                        r1 = operands[0]
+                        r2 = operands[1] if len(operands) > 1 else None
+                        if r1 in self.__REGISTERS:
+                            r1 = "{:X}".format(self.__REGISTERS[r1])
+                            r2 = "{:X}".format(self.__REGISTERS[r2]) if r2 in self.__REGISTERS else "0"
+                            opvalue = r1 + r2
+                        else:
+                            raise SyntaxError("no register {}".format(r1))
+                    if operand in self.__Symbols or (operand[0]=='@' and operand[1:] in self.__Symbols) or operand[0]=='#':
+                        if operand[0] = '@':
+                            flag_ni = '10'
+                            operand = operand[1:]
+                        elif operand[0] = '#':
+                            flag_ni = '01'
+                            operand = operand[1:]
+                        opcode = int(self.__OPERATORS[operator]['opcode'], 16) + int(flag_ni, 2)    # set flag n i
+                        opcode = "{:02X}".format(opcode)                                            # transform to hex
+                        if re.match("^\d+$", operand):
+                            opvalue = "{:04X}".format(int(operand))
+                        elif -2048 <= self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] < 2048:
+                            flag__xbpe = "0010"
+                            opvalue = "{:04X}".format(self.__Symbols[operand])
+                            opvalue[0] = "{:X}".format(int(flag__xbpe, 2))
+                        elif self.__base and 0 <= self.__Symbols[operand]-self.__base < 4096:
+                            flag__xbpe = "0100"
+                            opvalue = "{:04X}".format(self.__Symbols[operand])
+                            opvalue[0] = "{:X}".format(int(flag__xbpe, 2))
+                        else:
+                            raise SyntaxError("need to transform to format 4")
+
+                elif operator in self.__DIRECTIVES:
+                    if operator == 'BASE':
+                        self.__base = self.__Symbols[operand]
+                    elif operator == 'BYTE':
+                        opvalue = self.__constant(operand)
+                    elif operator == 'END':
+                        # write end record
+                        pass
+                    else:
+                        pass
+                elif operand[0]=='+' and operator[1:] in self.__Symbols:
+                    pass
+
         pass_1()
+        pass_2()
 
     def __parse(self, line):
         def is_comment():
