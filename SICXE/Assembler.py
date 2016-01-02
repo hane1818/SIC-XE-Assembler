@@ -148,11 +148,11 @@ class Assembler:
                             opvalue = r1 + r2
                         else:
                             raise SyntaxError("no register {}".format(r1))
-                    if operand in self.__Symbols or (operand[0]=='@' and operand[1:] in self.__Symbols) or operand[0]=='#':
-                        if operand[0] = '@':
+                    if operand and (operand in self.__Symbols or (operand[0] == '@' and operand[1:] in self.__Symbols) or operand[0] == '#'):
+                        if operand[0] == '@':
                             flag_ni = '10'
                             operand = operand[1:]
-                        elif operand[0] = '#':
+                        elif operand[0] == '#':
                             flag_ni = '01'
                             operand = operand[1:]
                         opcode = int(self.__OPERATORS[operator]['opcode'], 16) + int(flag_ni, 2)    # set flag n i
@@ -162,11 +162,11 @@ class Assembler:
                         elif -2048 <= self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] < 2048:
                             flag__xbpe = "0010"
                             opvalue = "{:04X}".format(self.__Symbols[operand])
-                            opvalue[0] = "{:X}".format(int(flag__xbpe, 2))
+                            opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
                         elif self.__base and 0 <= self.__Symbols[operand]-self.__base < 4096:
                             flag__xbpe = "0100"
                             opvalue = "{:04X}".format(self.__Symbols[operand])
-                            opvalue[0] = "{:X}".format(int(flag__xbpe, 2))
+                            opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
                         else:
                             raise SyntaxError("need to transform to format 4")
 
