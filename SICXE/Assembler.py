@@ -103,7 +103,8 @@ class Assembler:
                     symbol = line['symbol']
                     if symbol in self.__Symbols:
                         raise KeyError("Duplicate symbol {}".format(symbol))
-                    self.__Symbols[symbol] = "{:04X}".format(loc_ctr)
+                    self.__Symbols[symbol] = loc_ctr
+                line['loc'] = loc_ctr
 
                 operator = line['operator']
                 if operator in self.__DIRECTIVES:
