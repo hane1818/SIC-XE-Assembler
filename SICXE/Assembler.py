@@ -139,10 +139,9 @@ class Assembler:
             operator = '(?P<operator>\+?({}))'.format(operator)
             operand = '(\s+(?P<operand>(\S+(\s*,\s*\S+)?)))?\s*$'
             rule = re.compile(symbol+operator+operand)
-            if rule.match(line):
-                return {'symbol': rule.match(line).group('symbol'),
-                        'operator': rule.match(line).group('operator'),
-                        'operand': rule.match(line).group('operand')}
+            result = rule.match(line)
+            if result:
+                return result.groupdict()
             return False
 
         def is_space():
