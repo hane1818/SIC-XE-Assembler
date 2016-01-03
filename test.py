@@ -8,6 +8,11 @@ class TestAssembler(unittest.TestCase):
 
     def test_read_source(self):
         self.assertIsNotNone(self.asm.source, "Can't read file")
+        print("=====Source code=====")
+        for i in self.asm.source:
+            print("{1}\t{0}\t{2}".format(i['operator'],
+                                         i['symbol'] if i['symbol'] else "\t",
+                                         i['operand'] if i['operand'] else "\t"))
 
     def test_load_operators(self):
         load_op = self.asm.load_operators('Operators.dat')
@@ -20,7 +25,11 @@ class TestAssembler(unittest.TestCase):
         print(add_op)
 
     def test_operator_table(self):
-        print(self.asm.OPTAB)
+        print("=======OPTAB========")
+        for i, val in self.asm.OPTAB.items():
+            print(i, " : {}\t{}".format(val['format'], val['opcode']))
+
+
 
 if __name__ == "__main__":
     unittest.main()
