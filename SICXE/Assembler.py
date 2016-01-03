@@ -65,6 +65,10 @@ class Assembler:
     def OPTAB(self):
         return self.__OPERATORS
 
+    @property
+    def object_program(self):
+        return self.__program
+
     def append_operator(self, opname, opcode, opformat):
         if opname not in self.__OPERATORS:
             self.__OPERATORS[opname] = {'opcode': opcode, 'format': opformat}
@@ -249,7 +253,7 @@ class Assembler:
             self.header = ""
             self.end = ""
             self.text = []
-            self.modify = []
+            self.modification = []
             self.start_loc = 0
 
         def add_header(self, title, start_loc):
@@ -261,6 +265,10 @@ class Assembler:
         def add_end(self, loc):
             self.end = "E{:06X}".format(self.start_loc)
             self.header += "{:06X}".format(loc-self.start_loc)
+
+        def __str__(self):
+            string = [self.header] + self.text + self.modification + [self.end]
+            return '\n'.join(string)
 
 
 # Helper function (not to be exported)
