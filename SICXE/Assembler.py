@@ -216,8 +216,8 @@ class Assembler:
                     else:
                         opvalue = "00000"
                     opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue
-
-                # write text record opcode, opvalue, location
+                if opcode or opvalue:
+                    self.__program.add_text(opcode, opvalue, location)    # write text record opcode, opvalue, location
 
         pass_1()
         pass_2()
@@ -254,7 +254,8 @@ class Assembler:
             self.end = ""
             self.text = []
             self.modification = []
-            self.start_loc = 0
+            self.start_loc = None
+            self.now_loc = None
 
         def add_header(self, title, start_loc):
             if not title:
@@ -268,6 +269,20 @@ class Assembler:
 
         def add_modification(self, loc):
             self.modification.append("M{:06X}05".format(loc+1))
+
+        def add_text(self, opcode, opvalue, loc):
+            opcode = "" if not opcode else opcode
+            opvalue = "" if not opvalue else opvalue
+            object_code = opcode + opvalue
+            if not self.text or not self.text[-1] or loc != self.now_loc or len(self.text[-1]) + len(object_code) > 70:
+                self.now_loc = loc
+                self.text.append("T{:06X}00".format(self.now_loc))
+
+            if object_code != "":
+                text_len = int(self.text[-1][7:9], 16) + len(object_code) // 2
+                self.text[-1] = self.text[-1][:7] + "{:02X}".format(text_len) + self.text[-1][9:]
+                self.text[-1] += object_code
+                self.now_loc += len(object_code) // 2
 
         def __str__(self):
             string = [self.header] + self.text + self.modification + [self.end]
