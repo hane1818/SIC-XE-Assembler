@@ -129,7 +129,7 @@ class Assembler:
 
         def pass_2():
             self.__title = self.__source[0]['symbol'] if self.__source[0]['operator'] == 'START' else None
-            # write header record
+            self.__program.add_header(self.__title, self.__begin_loc)   # write header record
 
             for line in self.__source:
                 operator, operand, location = line['operator'], line['operand'], line['loc']
@@ -192,12 +192,11 @@ class Assembler:
                     elif operator == 'BYTE':
                         opvalue = constant(operand)
                     elif operator == 'END':
-                        # write end record
-                        pass
+                        self.__program.add_end(location)    # write end record
+                        break
                     else:
                         pass
                 elif operator[0]=='+' and operator[1:] in self.__OPERATORS:
-                    print("===========hi============")
                     flag__xbpe="0001"
                     operator = operator[1:]
                     if operand[0] == '#':
@@ -251,6 +250,17 @@ class Assembler:
             self.end = ""
             self.text = []
             self.modify = []
+            self.start_loc = 0
+
+        def add_header(self, title, start_loc):
+            if not title:
+                title = "NONE"
+            self.start_loc = start_loc
+            self.header = "H{:<6}{:06X}".format(title, start_loc)
+
+        def add_end(self, loc):
+            self.end = "E{:06X}".format(self.start_loc)
+            self.header += "{:06X}".format(loc-self.start_loc)
 
 
 # Helper function (not to be exported)
