@@ -29,7 +29,12 @@ class TestAssembler(unittest.TestCase):
         for i, val in self.asm.OPTAB.items():
             print(i, " : {}\t{}".format(val['format'], val['opcode']))
 
-
+    def test_symbol_table(self):
+        self.asm.two_pass()
+        print("======SYMTAB======")
+        print("{:^8}\t{:^5}".format('"symbol"', '"val"'))
+        for i, val in self.asm.SYMTAB.items():
+            print(" {:8}\t{:04X}".format(i, val))
 
 if __name__ == "__main__":
     unittest.main()
