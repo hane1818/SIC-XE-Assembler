@@ -212,10 +212,10 @@ class Assembler:
                         opvalue = "{:05X}".format(int(operand))
                     elif operand in self.__Symbols:
                         opvalue = "{:05X}".format(self.__Symbols[operand])
+                        self.__program.add_modification(location)
                     else:
                         opvalue = "00000"
                     opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue
-                    #wirte modification record location
 
                 # write text record opcode, opvalue, location
 
@@ -265,6 +265,9 @@ class Assembler:
         def add_end(self, loc):
             self.end = "E{:06X}".format(self.start_loc)
             self.header += "{:06X}".format(loc-self.start_loc)
+
+        def add_modification(self, loc):
+            self.modification.append("M{:06X}05".format(loc+1))
 
         def __str__(self):
             string = [self.header] + self.text + self.modification + [self.end]
