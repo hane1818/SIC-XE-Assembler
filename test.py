@@ -36,5 +36,10 @@ class TestAssembler(unittest.TestCase):
         for i, val in self.asm.SYMTAB.items():
             print(" {:8}\t{:04X}".format(i, val))
 
+    def test_record(self):
+        self.asm.two_pass()
+        print("======Object Program=====")
+        print(self.asm.object_program)
+
 if __name__ == "__main__":
     unittest.main()
