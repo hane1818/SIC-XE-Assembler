@@ -27,7 +27,7 @@ class TestAssembler(unittest.TestCase):
     def test_operator_table(self):
         print("=======OPTAB========")
         for i, val in self.asm.OPTAB.items():
-            print(i, " : {}\t{}".format(val['format'], val['opcode']))
+            print(" {:6}\t{:2}\t{:02X}".format(i, val['format'], int(val['opcode'], 16)))
 
     def test_symbol_table(self):
         self.asm.two_pass()
