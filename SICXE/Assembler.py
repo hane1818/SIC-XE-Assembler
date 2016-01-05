@@ -125,20 +125,38 @@ class Assembler:
                         loc_ctr += len(constant(line['operand'])) // 2
                     elif operator == 'EQU':
                         if operand == '*':
-                            self.__Symbols[operand] = loc_ctr
+                            self.__Symbols[symbol] = loc_ctr
                         elif re.match('^\d+$', operand):
                             self.__Symbols[symbol] = int(operand)
                         elif operand in self.__Symbols:
                             self.__Symbols[symbol] = self.__Symbols[operand]
-                        elif re.match('\s*-\s*', operand):
+                        elif re.match('\S+\s*-\s*\S+', operand):
                             label1, label2 = re.split('\s*-\s*', operand)
                             if label1 in self.__Symbols and label2 in self.__Symbols and self.__Symbols[label1]-self.__Symbols[label2] >= 0:
                                 self.__Symbols[symbol] = self.__Symbols[label1]-self.__Symbols[label2]
                             else:
-                                raise TypeError("invalid value {}".format(operand))
+                                raise TypeError("undefined symbol: {}, {}".format(label1, label2))
                         else:
                             self.__Symbols[symbol] = None
-                            raise TypeError("invalid value {}".format(operand))
+                            raise TypeError("invalid value for EQU: {}".format(operand))
+                    elif operator == 'ORG':
+                        if re.match('^\d+$', operand):
+                            loc_ctr = int(operand)
+                        elif operand in self.__Symbols:
+                            loc_ctr = self.__Symbols[operand]
+                        elif re.match('\S+\s*\+\s*\S', operand):
+                            operand1, operand2 = re.split('\s*\+\s*')
+                            if operand1 in self.__Symbols:
+                                if re.match('^\d+$', operand2):
+                                    loc_ctr = self.__Symbols[operand1] + int(operand2)
+                                elif operand2 in self.__Symbols:
+                                    loc_ctr = self.__Symbols[operand1] + self.__Symbols[operand2]
+                                else:
+                                    raise TypeError("undefined symbol: {}".format(operand2))
+                            else:
+                                raise TypeError("undefined symbol: {}".format(operand1))
+                        else:
+                            raise TypeError("invalid value for ORG: {}".format(operand))
                     else:
                         pass
                 elif operator in self.__OPERATORS:
