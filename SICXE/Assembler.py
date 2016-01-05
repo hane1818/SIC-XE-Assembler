@@ -69,6 +69,10 @@ class Assembler:
         return self.__OPERATORS
 
     @property
+    def LITERAL(self):
+        return self.__Literals
+
+    @property
     def object_program(self):
         return self.__program
 
@@ -116,7 +120,8 @@ class Assembler:
                 line['loc'] = loc_ctr
 
                 if operand and re.match('^=\S+$', operand):
-                    undef_literals.append(operand)
+                    if operand not in undef_literals and operand not in self.__Literals:
+                        undef_literals.append(operand)
 
                 if operator in self.__DIRECTIVES:
                     if operator == 'WORD':
