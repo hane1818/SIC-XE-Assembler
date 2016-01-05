@@ -16,6 +16,7 @@ class Assembler:
                     break
         fin.close()
         self.__Symbols = {}
+        self.__Literals = {}
         self.__begin_loc = 0
         self.__title = None
         self.__base = None
@@ -98,6 +99,7 @@ class Assembler:
     def two_pass(self):
         def pass_1():
             loc_ctr = 0
+            undef_literals = []
 
             if self.__source[0]['operator'] == 'START':
                 self.__begin_loc = int(self.__source[0]['operand'])
@@ -106,14 +108,16 @@ class Assembler:
                 loc_ctr = self.__begin_loc
 
             for line in self.__source:
-                if line['symbol']:
-                    symbol = line['symbol']
+                symbol, operator, operand = line['symbol'], line['operator'], line['operand']
+                if symbol and symbol != '*':
                     if symbol in self.__Symbols:
                         raise KeyError("Duplicate symbol {}".format(symbol))
                     self.__Symbols[symbol] = loc_ctr
                 line['loc'] = loc_ctr
 
-                operator, operand = line['operator'], line['operand']
+                if operand and re.match('^=\S+$', operand):
+                    undef_literals.append(operand)
+
                 if operator in self.__DIRECTIVES:
                     if operator == 'WORD':
                         loc_ctr += 3
@@ -157,6 +161,11 @@ class Assembler:
                                 raise TypeError("undefined symbol: {}".format(operand1))
                         else:
                             raise TypeError("invalid value for ORG: {}".format(operand))
+                    elif operator == 'LTORG' or operator == 'END':
+                        index = self.__source.index(line)
+                        for i, literal in enumerate(undef_literals):
+                            self.__source.insert(index+i+1, {'symbol': '*', 'operator': literal, 'operand': None})
+                        undef_literals.clear()
                     else:
                         pass
                 elif operator in self.__OPERATORS:
@@ -166,6 +175,9 @@ class Assembler:
                         loc_ctr += 4
                     else:
                         raise SyntaxError("invalid operator format from {} to 4".format(self.__OPERATORS[operator[1:]]))
+                elif re.match('^=\S+$', operator):
+                    self.__Literals[operator] = loc_ctr
+                    loc_ctr += len(constant(operator[1:])) // 2
 
         def pass_2():
             self.__title = self.__source[0]['symbol'] if self.__source[0]['operator'] == 'START' else None
