@@ -27,7 +27,9 @@ class Assembler:
     }
 
     __DIRECTIVES = [
-        "START", "END", "BYTE", "WORD", "RESB", "RESW", "BASE"
+        "START", "END", "BYTE", "WORD", "RESB", "RESW", "BASE",
+        "LTORG", "EQU", "ORG",
+        "USE", "EXTDEF", "EXTREF", "CSECT"
     ]
 
     __OPERATORS = {
