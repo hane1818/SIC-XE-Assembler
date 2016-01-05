@@ -113,7 +113,7 @@ class Assembler:
                     self.__Symbols[symbol] = loc_ctr
                 line['loc'] = loc_ctr
 
-                operator = line['operator']
+                operator, operand = line['operator'], line['operand']
                 if operator in self.__DIRECTIVES:
                     if operator == 'WORD':
                         loc_ctr += 3
@@ -123,6 +123,22 @@ class Assembler:
                         loc_ctr += int(line['operand'])
                     elif operator == 'BYTE':
                         loc_ctr += len(constant(line['operand'])) // 2
+                    elif operator == 'EQU':
+                        if operand == '*':
+                            self.__Symbols[operand] = loc_ctr
+                        elif re.match('^\d+$', operand):
+                            self.__Symbols[symbol] = int(operand)
+                        elif operand in self.__Symbols:
+                            self.__Symbols[symbol] = self.__Symbols[operand]
+                        elif re.match('\s*-\s*', operand):
+                            label1, label2 = re.split('\s*-\s*', operand)
+                            if label1 in self.__Symbols and label2 in self.__Symbols and self.__Symbols[label1]-self.__Symbols[label2] >= 0:
+                                self.__Symbols[symbol] = self.__Symbols[label1]-self.__Symbols[label2]
+                            else:
+                                raise TypeError("invalid value {}".format(operand))
+                        else:
+                            self.__Symbols[symbol] = None
+                            raise TypeError("invalid value {}".format(operand))
                     else:
                         pass
                 elif operator in self.__OPERATORS:
@@ -234,7 +250,7 @@ class Assembler:
             symbol = '^\s*((?P<symbol>\w+)\s+)?'
             operator = '|'.join(list(self.__OPERATORS.keys()) + self.__DIRECTIVES)
             operator = '(?P<operator>\+?({}))'.format(operator)
-            operand = '(\s+(?P<operand>(\S+(\s*,\s*\S+)?)))?\s*$'
+            operand = '(\s+(?P<operand>(\S+(\s*\S\s*\S+)?)))?\s*$'
             rule = re.compile(symbol+operator+operand)
             result = rule.match(line)
             if result:
