@@ -122,6 +122,7 @@ class Assembler:
         undef_literals = []
         block_name = []
         block_loc = {}
+        block_symbol = {}
         now_block = ""
 
         if self.__source[0]['operator'] == 'START':
@@ -136,12 +137,14 @@ class Assembler:
             block_name.append(self.source[0]['symbol'])
             block_loc[self.__source[0]['symbol']] = loc_ctr
             now_block = block_name[0]
+            block_symbol[now_block] = []
         for line in self.__source:
             symbol, operator, operand = line['symbol'], line['operator'], line['operand']
             if symbol and symbol != '*':
                 if symbol in self.__Symbols:
                     raise KeyError("Duplicate symbol {}".format(symbol))
                 self.__Symbols[symbol] = loc_ctr
+                block_symbol[now_block].append(symbol)
             line['loc'] = loc_ctr
 
             if operand and re.match('^=\S+$', operand):
@@ -162,14 +165,8 @@ class Assembler:
                         self.__Symbols[symbol] = loc_ctr
                     elif re.match('^\d+$', operand):
                         self.__Symbols[symbol] = int(operand)
-                    elif operand in self.__Symbols:
-                        self.__Symbols[symbol] = self.__Symbols[operand]
-                    elif re.match('\S+\s*-\s*\S+', operand):
-                        label1, label2 = re.split('\s*-\s*', operand)
-                        if label1 in self.__Symbols and label2 in self.__Symbols and self.__Symbols[label1]-self.__Symbols[label2] >= 0:
-                            self.__Symbols[symbol] = self.__Symbols[label1]-self.__Symbols[label2]
-                        else:
-                            raise TypeError("undefined symbol: {}, {}".format(label1, label2))
+                    elif operand in self.__Symbols or re.match('\S+\s*-\s*\S+', operand):
+                        self.__Symbols[symbol] = operand
                     else:
                         self.__Symbols[symbol] = None
                         raise TypeError("invalid value for EQU: {}".format(operand))
@@ -195,8 +192,8 @@ class Assembler:
                     index = self.__source.index(line)
                     for i, literal in enumerate(undef_literals):
                         self.__source.insert(index+i+1, {'symbol': '*', 'operator': literal, 'operand': None})
+                        block_symbol[now_block].append(literal)
                     undef_literals.clear()
-                    print(block_loc, block_name, now_block)
                 elif operator == 'USE':                             # program block
                     block_loc[now_block] = loc_ctr
                     if operand is None:
@@ -208,8 +205,9 @@ class Assembler:
                             loc_ctr = block_loc[operand]
                         else:
                             block_name.append(operand)
-                            loc_ctr = 0
+                            loc_ctr = self.__begin_loc
                             block_loc[operand] = loc_ctr
+                            block_symbol[operand] = []
                 else:
                     pass
             elif operator in self.__OPERATORS:
@@ -222,6 +220,31 @@ class Assembler:
             elif re.match('^=\S+$', operator):
                 self.__Literals[operator] = loc_ctr
                 loc_ctr += len(constant(operator[1:])) // 2
+        # fix program block's location
+        block_loc[now_block] = loc_ctr
+        tmp_loc = self.__begin_loc
+        for x in block_name:
+            block_loc[x], tmp_loc = tmp_loc, block_loc[x]+tmp_loc
+            for i in block_symbol[x]:
+                if i in self.__Symbols.keys():
+                    # fix symbol-defined
+                    if type(self.__Symbols[i]) is str:
+                        label = self.__Symbols[i]
+                        if label in self.__Symbols.keys():
+                            self.__Symbols[i] = self.__Symbols[label]
+                        else:
+                            print("Label::",label)
+                            label1, label2 = re.split('\s*-\s*', label)
+                            if label1 in self.__Symbols and label2 in self.__Symbols and self.__Symbols[label1]-self.__Symbols[label2] >= 0:
+                                self.__Symbols[i] = self.__Symbols[label1]-self.__Symbols[label2]
+                                print("{:04X}".format(self.__Symbols[i]))
+                            else:
+                                raise TypeError("undefined symbol: {}, {}".format(label1, label2))
+                    # ------------------------
+                    else:
+                        self.__Symbols[i] += block_loc[x]
+                else:
+                    self.__Literals[i] += block_loc[x]
 
         return self
 
