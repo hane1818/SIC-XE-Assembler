@@ -12,6 +12,11 @@ if __name__ == '__main__':
         file = input("Please input again...>")
 
     asm = Assembler().load_file(file)
+    print("=====Source code=====")
+    for i in asm.source:
+        print("{1}\t{0}\t{2}".format(i['operator'],
+                                     i['symbol'] if i['symbol'] else "\t",
+                                     i['operand'] if i['operand'] else "\t"))
     print("\n=======OPTAB========\n")
     for i, val in asm.OPTAB.items():
         print(" {:6}\t{:2}\t{:02X}".format(i, val['format'], int(val['opcode'], 16)))
