@@ -181,6 +181,7 @@ class Assembler:
             elif re.match('^=\S+$', operator):
                 self.__Literals[operator] = loc_ctr
                 loc_ctr += len(constant(operator[1:])) // 2
+
     def pass_two(self):
         self.__title = self.__source[0]['symbol'] if self.__source[0]['operator'] == 'START' else None
         self.__program.add_header(self.__title, self.__begin_loc)   # write header record
@@ -291,8 +292,13 @@ class Assembler:
                 return True
             return False
 
-        if not is_comment() and is_code() and not is_space():
-            return is_code()
+        comment = is_comment()
+        space = is_space()
+        code = is_code()
+        if not comment and not space:
+            if code:
+                return code
+            raise TypeError("invalid operation code")
         return None
 
     class Record:
