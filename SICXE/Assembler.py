@@ -7,7 +7,7 @@ class Assembler:
         self.__source = None
         self.__Symbols = {}
         self.__Literals = {}
-        self.__begin_loc = 0
+        self.__begin_loc = None
         self.__title = None
         self.__base = None
         self.__program = self.Record()
@@ -35,6 +35,7 @@ class Assembler:
         "LDB":      {'opcode': '0x68', 'format': 3},
         "LDCH":     {'opcode': '0x50', 'format': 3},
         "LDT":      {'opcode': '0x74', 'format': 3},
+        "LDX":      {'opcode': '0x04', 'format': 3},
         "RD":       {'opcode': '0xd8', 'format': 3},
         "RSUB":     {'opcode': '0x4c', 'format': 3},
         "STA":      {'opcode': '0x0c', 'format': 3},
@@ -42,6 +43,7 @@ class Assembler:
         "STL":      {'opcode': '0x14', 'format': 3},
         "STX":      {'opcode': '0x10', 'format': 3},
         "TD":       {'opcode': '0xe0', 'format': 3},
+        "TIX":      {'opcode': '0x2c', 'format': 3},
         "TIXR":     {'opcode': '0xb8', 'format': 2},
         "WD":       {'opcode': '0xdc', 'format': 3}
     }
@@ -78,6 +80,7 @@ class Assembler:
                 except ValueError:
                     break
         fin.close()
+        return self
 
     def append_operator(self, opname, opcode, opformat):
         if opname not in self.__OPERATORS:
@@ -104,13 +107,19 @@ class Assembler:
         return operators
 
     def pass_one(self):
+        if not self.__source:
+            raise RuntimeError("no source code in assembler, need to load_file() first")
         loc_ctr = 0
         undef_literals = []
 
         if self.__source[0]['operator'] == 'START':
-            self.__begin_loc = int(self.__source[0]['operand'])
-            if self.__begin_loc is None:
+            if not self.__source[0]['operand']:
                 raise TypeError("START takes exactly one argument (0 given)")
+            try:
+                self.__begin_loc = int(self.__source[0]['operand'], 16)
+            except ValueError:
+                raise ValueError("START address need to be a number")
+
             loc_ctr = self.__begin_loc
         for line in self.__source:
             symbol, operator, operand = line['symbol'], line['operator'], line['operand']
@@ -185,14 +194,20 @@ class Assembler:
                 self.__Literals[operator] = loc_ctr
                 loc_ctr += len(constant(operator[1:])) // 2
 
+        return self
+
     def pass_two(self):
+        if not self.__source:
+            raise RuntimeError("no source code in assembler, need to load_file() first")
+        elif self.__begin_loc is None or 'loc' not in self.__source[0].keys():
+            raise RuntimeError("need to do pass_one first")
         self.__title = self.__source[0]['symbol'] if self.__source[0]['operator'] == 'START' else None
         self.__program.add_header(self.__title, self.__begin_loc)   # write header record
 
         for line in self.__source:
             operator, operand, location = line['operator'], line['operand'], line['loc']
             flag_ni = '11'          # default n=1, i=1
-            flag__xbpe = '0000'     # default x, b, p, e = 0, 0 , 0, 0
+            flag_xbpe = '0000'     # default x, b, p, e = 0, 0, 0, 0
             opcode = ""
             opvalue = ""
             if operator in self.__OPERATORS:
@@ -218,26 +233,34 @@ class Assembler:
                     if re.match("^\d+$", operand):
                         opvalue = "{:04X}".format(int(operand))
                     elif -2048 <= self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] < 2048:
-                        flag__xbpe = "0010"
+                        flag_xbpe = "0010"
                         opvalue = "{:04X}".format(self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] & int('ffff', 16))
-                        opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
-                    elif self.__base and 0 <= self.__Symbols[operand]-self.__base < 4096:
-                        flag__xbpe = "0100"
+                        opvalue = "{:X}".format(int(flag_xbpe, 2)) + opvalue[1:]
+                    elif not self.__base:
+                        flag_ni = '00'
+                        opvalue = "{:04X}".format(self.__Symbols[operand])
+                        self.__program.add_modification(location, form=3)
+                    elif 0 <= self.__Symbols[operand]-self.__base < 4096:
+                        flag_xbpe = "0100"
                         opvalue = "{:04X}".format(self.__Symbols[operand]-self.__base)
-                        opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
+                        opvalue = "{:X}".format(int(flag_xbpe, 2)) + opvalue[1:]
                     else:
                         raise SyntaxError("need to transform to format 4")
                 elif operand and operand_pair.match(operand):
                     operand, reg = operand_pair.match(operand).groups()
                     if reg in self.__REGISTERS and reg == 'X':
                         if -2048 <= self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] < 2048:
-                            flag__xbpe = "1010"
+                            flag_xbpe = "1010"
                             opvalue = "{:04X}".format(self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] & int('ffff', 16))
-                            opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
+                            opvalue = "{:X}".format(int(flag_xbpe, 2)) + opvalue[1:]
+                        elif not self.__base:
+                            flag_ni = '00'
+                            opvalue = "{:04X}".format(self.__Symbols[operand])
+                            self.__program.add_modification(location, form=3)
                         elif self.__base and 0 <= self.__Symbols[operand]-self.__base < 4096:
-                            flag__xbpe = "1100"
+                            flag_xbpe = "1100"
                             opvalue = "{:04X}".format(self.__Symbols[operand]-self.__base)
-                            opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
+                            opvalue = "{:X}".format(int(flag_xbpe, 2)) + opvalue[1:]
                         else:
                             raise SyntaxError("need to transform to format 4")
                 else:
@@ -255,7 +278,7 @@ class Assembler:
                 else:
                     pass
             elif operator[0]=='+' and operator[1:] in self.__OPERATORS:
-                flag__xbpe="0001"
+                flag_xbpe="0001"
                 operator = operator[1:]
                 if operand[0] == '#':
                     flag_ni = "01"
@@ -269,9 +292,11 @@ class Assembler:
                     self.__program.add_modification(location)
                 else:
                     opvalue = "00000"
-                opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue
+                opvalue = "{:X}".format(int(flag_xbpe, 2)) + opvalue
             if opcode or opvalue:
                 self.__program.add_text(opcode, opvalue, location)    # write text record opcode, opvalue, location
+
+        return self
 
     def __parse(self, line):
         def is_comment():
@@ -323,8 +348,11 @@ class Assembler:
             self.end = "E{:06X}".format(self.start_loc)
             self.header += "{:06X}".format(loc-self.start_loc)
 
-        def add_modification(self, loc):
-            self.modification.append("M{:06X}05".format(loc+1))
+        def add_modification(self, loc, form=4):
+            if form == 4:
+                self.modification.append("M{:06X}05".format(loc+1))
+            elif form == 3:
+                self.modification.append("M{:06X}06".format(loc))
 
         def add_text(self, opcode, opvalue, loc):
             opcode = "" if not opcode else opcode
