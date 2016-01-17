@@ -3,18 +3,8 @@ import re
 
 
 class Assembler:
-    def __init__(self, filename):
-        fin = open(filename, 'r', encoding="utf-8-sig")
-        if fin:
-            self.__source = fin.read().split('\n')
-            self.__source = [self.__parse(i) for i in self.__source]
-            self.__source = [uppercase(i) for i in self.__source]
-            while True:
-                try:
-                    self.__source.remove(None)
-                except ValueError:
-                    break
-        fin.close()
+    def __init__(self):
+        self.__source = None
         self.__Symbols = {}
         self.__Literals = {}
         self.__begin_loc = 0
@@ -34,26 +24,26 @@ class Assembler:
     ]
 
     __OPERATORS = {
-        "CLEAR": {'opcode': '0xb4', 'format': 2},
-        "COMP": {'opcode': '0x28', 'format': 3},
-        "COMPR": {'opcode': '0xa0', 'format': 2},
-        "J": {'opcode': '0x3c', 'format': 3},
-        "JEQ": {'opcode': '0x30', 'format': 3},
-        "JLT": {'opcode': '0x38', 'format': 3},
-        "JSUB": {'opcode': '0x48', 'format': 3},
-        "LDA": {'opcode': '0x00', 'format': 3},
-        "LDB": {'opcode': '0x68', 'format': 3},
-        "LDCH": {'opcode': '0x50', 'format': 3},
-        "LDT": {'opcode': '0x74', 'format': 3},
-        "RD": {'opcode': '0xd8', 'format': 3},
-        "RSUB": {'opcode': '0x4c', 'format': 3},
-        "STA": {'opcode': '0x0c', 'format': 3},
-        "STCH": {'opcode': '0x54', 'format': 3},
-        "STL": {'opcode': '0x14', 'format': 3},
-        "STX": {'opcode': '0x10', 'format': 3},
-        "TD": {'opcode': '0xe0', 'format': 3},
-        "TIXR": {'opcode': '0xb8', 'format': 2},
-        "WD": {'opcode': '0xdc', 'format': 3}
+        "CLEAR":    {'opcode': '0xb4', 'format': 2},
+        "COMP":     {'opcode': '0x28', 'format': 3},
+        "COMPR":    {'opcode': '0xa0', 'format': 2},
+        "J":        {'opcode': '0x3c', 'format': 3},
+        "JEQ":      {'opcode': '0x30', 'format': 3},
+        "JLT":      {'opcode': '0x38', 'format': 3},
+        "JSUB":     {'opcode': '0x48', 'format': 3},
+        "LDA":      {'opcode': '0x00', 'format': 3},
+        "LDB":      {'opcode': '0x68', 'format': 3},
+        "LDCH":     {'opcode': '0x50', 'format': 3},
+        "LDT":      {'opcode': '0x74', 'format': 3},
+        "RD":       {'opcode': '0xd8', 'format': 3},
+        "RSUB":     {'opcode': '0x4c', 'format': 3},
+        "STA":      {'opcode': '0x0c', 'format': 3},
+        "STCH":     {'opcode': '0x54', 'format': 3},
+        "STL":      {'opcode': '0x14', 'format': 3},
+        "STX":      {'opcode': '0x10', 'format': 3},
+        "TD":       {'opcode': '0xe0', 'format': 3},
+        "TIXR":     {'opcode': '0xb8', 'format': 2},
+        "WD":       {'opcode': '0xdc', 'format': 3}
     }
 
     @property
@@ -75,6 +65,19 @@ class Assembler:
     @property
     def object_program(self):
         return self.__program
+
+    def load_file(self, filename):
+        fin = open(filename, 'r', encoding="utf-8-sig")
+        if fin:
+            self.__source = fin.read().split('\n')
+            self.__source = [self.__parse(i) for i in self.__source]
+            self.__source = [uppercase(i) for i in self.__source]
+            while True:
+                try:
+                    self.__source.remove(None)
+                except ValueError:
+                    break
+        fin.close()
 
     def append_operator(self, opname, opcode, opformat):
         if opname not in self.__OPERATORS:

@@ -4,7 +4,8 @@ import unittest
 
 class TestAssembler(unittest.TestCase):
     def setUp(self):
-        self.asm = Assembler("SICXE.txt")
+        self.asm = Assembler()
+        self.asm.load_file("SICXE.txt")
 
     def test_read_source(self):
         self.assertIsNotNone(self.asm.source, "Can't read file")
