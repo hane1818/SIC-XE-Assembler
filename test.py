@@ -4,7 +4,7 @@ import unittest
 
 class TestAssembler(unittest.TestCase):
     def setUp(self):
-        self.asm = Assembler("LITERAL.txt")
+        self.asm = Assembler("SICXE.txt")
 
     def test_read_source(self):
         self.assertIsNotNone(self.asm.source, "Can't read file")
@@ -30,20 +30,23 @@ class TestAssembler(unittest.TestCase):
             print(" {:6}\t{:2}\t{:02X}".format(i, val['format'], int(val['opcode'], 16)))
 
     def test_symbol_table(self):
-        self.asm.two_pass()
+        self.asm.pass_one()
+        self.asm.pass_two()
         print("======SYMTAB======")
         print("{:^8}\t{:^5}".format('"symbol"', '"val"'))
         for i, val in self.asm.SYMTAB.items():
             print(" {:8}\t{:04X}".format(i, val))
 
     def test_literal(self):
-        self.asm.two_pass()
+        self.asm.pass_one()
+        self.asm.pass_two()
         print("=======LITERALS========")
         for i, val in self.asm.LITERAL.items():
             print(" {:7}\t{:04X}".format(i, val))
 
     def test_record(self):
-        self.asm.two_pass()
+        self.asm.pass_one()
+        self.asm.pass_two()
         print("======Object Program=====")
         print(self.asm.object_program)
 

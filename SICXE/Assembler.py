@@ -100,180 +100,174 @@ class Assembler:
         self.__OPERATORS = operators
         return operators
 
-    def two_pass(self):
-        def pass_1():
-            loc_ctr = 0
-            undef_literals = []
+    def pass_one(self):
+        loc_ctr = 0
+        undef_literals = []
 
-            if self.__source[0]['operator'] == 'START':
-                self.__begin_loc = int(self.__source[0]['operand'])
-                if self.__begin_loc is None:
-                    raise TypeError("START takes exactly one argument (0 given)")
-                loc_ctr = self.__begin_loc
+        if self.__source[0]['operator'] == 'START':
+            self.__begin_loc = int(self.__source[0]['operand'])
+            if self.__begin_loc is None:
+                raise TypeError("START takes exactly one argument (0 given)")
+            loc_ctr = self.__begin_loc
+        for line in self.__source:
+            symbol, operator, operand = line['symbol'], line['operator'], line['operand']
+            if symbol and symbol != '*':
+                if symbol in self.__Symbols:
+                    raise KeyError("Duplicate symbol {}".format(symbol))
+                self.__Symbols[symbol] = loc_ctr
+            line['loc'] = loc_ctr
 
-            for line in self.__source:
-                symbol, operator, operand = line['symbol'], line['operator'], line['operand']
-                if symbol and symbol != '*':
-                    if symbol in self.__Symbols:
-                        raise KeyError("Duplicate symbol {}".format(symbol))
-                    self.__Symbols[symbol] = loc_ctr
-                line['loc'] = loc_ctr
+            if operand and re.match('^=\S+$', operand):
+                if operand not in undef_literals and operand not in self.__Literals:
+                    undef_literals.append(operand)
 
-                if operand and re.match('^=\S+$', operand):
-                    if operand not in undef_literals and operand not in self.__Literals:
-                        undef_literals.append(operand)
-
-                if operator in self.__DIRECTIVES:
-                    if operator == 'WORD':
-                        loc_ctr += 3
-                    elif operator == 'RESW':
-                        loc_ctr += int(line['operand']) * 3
-                    elif operator == 'RESB':
-                        loc_ctr += int(line['operand'])
-                    elif operator == 'BYTE':
-                        loc_ctr += len(constant(line['operand'])) // 2
-                    elif operator == 'EQU':
-                        if operand == '*':
-                            self.__Symbols[symbol] = loc_ctr
-                        elif re.match('^\d+$', operand):
-                            self.__Symbols[symbol] = int(operand)
-                        elif operand in self.__Symbols:
-                            self.__Symbols[symbol] = self.__Symbols[operand]
-                        elif re.match('\S+\s*-\s*\S+', operand):
-                            label1, label2 = re.split('\s*-\s*', operand)
-                            if label1 in self.__Symbols and label2 in self.__Symbols and self.__Symbols[label1]-self.__Symbols[label2] >= 0:
-                                self.__Symbols[symbol] = self.__Symbols[label1]-self.__Symbols[label2]
-                            else:
-                                raise TypeError("undefined symbol: {}, {}".format(label1, label2))
+            if operator in self.__DIRECTIVES:
+                if operator == 'WORD':
+                    loc_ctr += 3
+                elif operator == 'RESW':
+                    loc_ctr += int(line['operand']) * 3
+                elif operator == 'RESB':
+                    loc_ctr += int(line['operand'])
+                elif operator == 'BYTE':
+                    loc_ctr += len(constant(line['operand'])) // 2
+                elif operator == 'EQU':
+                    if operand == '*':
+                        self.__Symbols[symbol] = loc_ctr
+                    elif re.match('^\d+$', operand):
+                        self.__Symbols[symbol] = int(operand)
+                    elif operand in self.__Symbols:
+                        self.__Symbols[symbol] = self.__Symbols[operand]
+                    elif re.match('\S+\s*-\s*\S+', operand):
+                        label1, label2 = re.split('\s*-\s*', operand)
+                        if label1 in self.__Symbols and label2 in self.__Symbols and self.__Symbols[label1]-self.__Symbols[label2] >= 0:
+                            self.__Symbols[symbol] = self.__Symbols[label1]-self.__Symbols[label2]
                         else:
-                            self.__Symbols[symbol] = None
-                            raise TypeError("invalid value for EQU: {}".format(operand))
-                    elif operator == 'ORG':
-                        if re.match('^\d+$', operand):
-                            loc_ctr = int(operand)
-                        elif operand in self.__Symbols:
-                            loc_ctr = self.__Symbols[operand]
-                        elif re.match('\S+\s*\+\s*\S', operand):
-                            operand1, operand2 = re.split('\s*\+\s*')
-                            if operand1 in self.__Symbols:
-                                if re.match('^\d+$', operand2):
-                                    loc_ctr = self.__Symbols[operand1] + int(operand2)
-                                elif operand2 in self.__Symbols:
-                                    loc_ctr = self.__Symbols[operand1] + self.__Symbols[operand2]
-                                else:
-                                    raise TypeError("undefined symbol: {}".format(operand2))
-                            else:
-                                raise TypeError("undefined symbol: {}".format(operand1))
-                        else:
-                            raise TypeError("invalid value for ORG: {}".format(operand))
-                    elif operator == 'LTORG' or operator == 'END':
-                        index = self.__source.index(line)
-                        for i, literal in enumerate(undef_literals):
-                            self.__source.insert(index+i+1, {'symbol': '*', 'operator': literal, 'operand': None})
-                        undef_literals.clear()
+                            raise TypeError("undefined symbol: {}, {}".format(label1, label2))
                     else:
-                        pass
-                elif operator in self.__OPERATORS:
-                    loc_ctr += int(self.__OPERATORS[operator]['format'])
-                elif operator[0] == '+' and operator[1:] in self.__OPERATORS:
-                    if self.__OPERATORS[operator[1:]]['format'] == 3:
-                        loc_ctr += 4
-                    else:
-                        raise SyntaxError("invalid operator format from {} to 4".format(self.__OPERATORS[operator[1:]]))
-                elif re.match('^=\S+$', operator):
-                    self.__Literals[operator] = loc_ctr
-                    loc_ctr += len(constant(operator[1:])) // 2
-
-        def pass_2():
-            self.__title = self.__source[0]['symbol'] if self.__source[0]['operator'] == 'START' else None
-            self.__program.add_header(self.__title, self.__begin_loc)   # write header record
-
-            for line in self.__source:
-                operator, operand, location = line['operator'], line['operand'], line['loc']
-                flag_ni = '11'          # default n=1, i=1
-                flag__xbpe = '0000'     # default x, b, p, e = 0, 0 , 0, 0
-                opcode = ""
-                opvalue = ""
-                if operator in self.__OPERATORS:
-                    operand_pair = re.compile("(?P<operand1>\w+)\s*,?\s*(?P<operand2>\w+)?")
-                    if self.__OPERATORS[operator]['format'] == 2:
-                        flag_ni = '00'
-                        operands = operand_pair.match(operand).groups()
-                        r1 = operands[0]
-                        r2 = operands[1] if len(operands) > 1 else None
-                        if r1 in self.__REGISTERS:
-                            r1 = "{:X}".format(self.__REGISTERS[r1])
-                            r2 = "{:X}".format(self.__REGISTERS[r2]) if r2 in self.__REGISTERS else "0"
-                            opvalue = r1 + r2
+                        self.__Symbols[symbol] = None
+                        raise TypeError("invalid value for EQU: {}".format(operand))
+                elif operator == 'ORG':
+                    if re.match('^\d+$', operand):
+                        loc_ctr = int(operand)
+                    elif operand in self.__Symbols:
+                        loc_ctr = self.__Symbols[operand]
+                    elif re.match('\S+\s*\+\s*\S', operand):
+                        operand1, operand2 = re.split('\s*\+\s*')
+                        if operand1 in self.__Symbols:
+                            if re.match('^\d+$', operand2):
+                                loc_ctr = self.__Symbols[operand1] + int(operand2)
+                            elif operand2 in self.__Symbols:
+                                loc_ctr = self.__Symbols[operand1] + self.__Symbols[operand2]
+                            else:
+                                raise TypeError("undefined symbol: {}".format(operand2))
                         else:
-                            raise SyntaxError("no register {}".format(r1))
-                    elif operand and (operand in self.__Symbols or (operand[0] == '@' and operand[1:] in self.__Symbols) or operand[0] == '#'):
-                        if operand[0] == '@':
-                            flag_ni = '10'
-                            operand = operand[1:]
-                        elif operand[0] == '#':
-                            flag_ni = '01'
-                            operand = operand[1:]
-                        if re.match("^\d+$", operand):
-                            opvalue = "{:04X}".format(int(operand))
-                        elif -2048 <= self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] < 2048:
-                            flag__xbpe = "0010"
+                            raise TypeError("undefined symbol: {}".format(operand1))
+                    else:
+                        raise TypeError("invalid value for ORG: {}".format(operand))
+                elif operator == 'LTORG' or operator == 'END':
+                    index = self.__source.index(line)
+                    for i, literal in enumerate(undef_literals):
+                        self.__source.insert(index+i+1, {'symbol': '*', 'operator': literal, 'operand': None})
+                    undef_literals.clear()
+                else:
+                    pass
+            elif operator in self.__OPERATORS:
+                loc_ctr += int(self.__OPERATORS[operator]['format'])
+            elif operator[0] == '+' and operator[1:] in self.__OPERATORS:
+                if self.__OPERATORS[operator[1:]]['format'] == 3:
+                    loc_ctr += 4
+                else:
+                    raise SyntaxError("invalid operator format from {} to 4".format(self.__OPERATORS[operator[1:]]))
+            elif re.match('^=\S+$', operator):
+                self.__Literals[operator] = loc_ctr
+                loc_ctr += len(constant(operator[1:])) // 2
+    def pass_two(self):
+        self.__title = self.__source[0]['symbol'] if self.__source[0]['operator'] == 'START' else None
+        self.__program.add_header(self.__title, self.__begin_loc)   # write header record
+
+        for line in self.__source:
+            operator, operand, location = line['operator'], line['operand'], line['loc']
+            flag_ni = '11'          # default n=1, i=1
+            flag__xbpe = '0000'     # default x, b, p, e = 0, 0 , 0, 0
+            opcode = ""
+            opvalue = ""
+            if operator in self.__OPERATORS:
+                operand_pair = re.compile("(?P<operand1>\w+)\s*,?\s*(?P<operand2>\w+)?")
+                if self.__OPERATORS[operator]['format'] == 2:
+                    flag_ni = '00'
+                    operands = operand_pair.match(operand).groups()
+                    r1 = operands[0]
+                    r2 = operands[1] if len(operands) > 1 else None
+                    if r1 in self.__REGISTERS:
+                        r1 = "{:X}".format(self.__REGISTERS[r1])
+                        r2 = "{:X}".format(self.__REGISTERS[r2]) if r2 in self.__REGISTERS else "0"
+                        opvalue = r1 + r2
+                    else:
+                        raise SyntaxError("no register {}".format(r1))
+                elif operand and (operand in self.__Symbols or (operand[0] == '@' and operand[1:] in self.__Symbols) or operand[0] == '#'):
+                    if operand[0] == '@':
+                        flag_ni = '10'
+                        operand = operand[1:]
+                    elif operand[0] == '#':
+                        flag_ni = '01'
+                        operand = operand[1:]
+                    if re.match("^\d+$", operand):
+                        opvalue = "{:04X}".format(int(operand))
+                    elif -2048 <= self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] < 2048:
+                        flag__xbpe = "0010"
+                        opvalue = "{:04X}".format(self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] & int('ffff', 16))
+                        opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
+                    elif self.__base and 0 <= self.__Symbols[operand]-self.__base < 4096:
+                        flag__xbpe = "0100"
+                        opvalue = "{:04X}".format(self.__Symbols[operand]-self.__base)
+                        opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
+                    else:
+                        raise SyntaxError("need to transform to format 4")
+                elif operand and operand_pair.match(operand):
+                    operand, reg = operand_pair.match(operand).groups()
+                    if reg in self.__REGISTERS and reg == 'X':
+                        if -2048 <= self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] < 2048:
+                            flag__xbpe = "1010"
                             opvalue = "{:04X}".format(self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] & int('ffff', 16))
                             opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
                         elif self.__base and 0 <= self.__Symbols[operand]-self.__base < 4096:
-                            flag__xbpe = "0100"
+                            flag__xbpe = "1100"
                             opvalue = "{:04X}".format(self.__Symbols[operand]-self.__base)
                             opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
                         else:
                             raise SyntaxError("need to transform to format 4")
-                    elif operand and operand_pair.match(operand):
-                        operand, reg = operand_pair.match(operand).groups()
-                        if reg in self.__REGISTERS and reg == 'X':
-                            if -2048 <= self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] < 2048:
-                                flag__xbpe = "1010"
-                                opvalue = "{:04X}".format(self.__Symbols[operand]-location-self.__OPERATORS[operator]['format'] & int('ffff', 16))
-                                opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
-                            elif self.__base and 0 <= self.__Symbols[operand]-self.__base < 4096:
-                                flag__xbpe = "1100"
-                                opvalue = "{:04X}".format(self.__Symbols[operand]-self.__base)
-                                opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue[1:]
-                            else:
-                                raise SyntaxError("need to transform to format 4")
-                    else:
-                        opvalue = "0000"
-                    opcode = int(self.__OPERATORS[operator]['opcode'], 16) + int(flag_ni, 2)    # set flag n i
-                    opcode = "{:02X}".format(opcode)                                            # transform to hex
-                elif operator in self.__DIRECTIVES:
-                    if operator == 'BASE':
-                        self.__base = self.__Symbols[operand]
-                    elif operator == 'BYTE':
-                        opvalue = constant(operand)
-                    elif operator == 'END':
-                        self.__program.add_end(location)    # write end record
-                        break
-                    else:
-                        pass
-                elif operator[0]=='+' and operator[1:] in self.__OPERATORS:
-                    flag__xbpe="0001"
-                    operator = operator[1:]
-                    if operand[0] == '#':
-                        flag_ni = "01"
-                        operand = operand[1:]
-                    opcode = int(self.__OPERATORS[operator]['opcode'], 16) + int(flag_ni, 2)    # set flag n i
-                    opcode = "{:02X}".format(opcode)                                            # transform to hex
-                    if re.match('^\d+$', operand):
-                        opvalue = "{:05X}".format(int(operand))
-                    elif operand in self.__Symbols:
-                        opvalue = "{:05X}".format(self.__Symbols[operand])
-                        self.__program.add_modification(location)
-                    else:
-                        opvalue = "00000"
-                    opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue
-                if opcode or opvalue:
-                    self.__program.add_text(opcode, opvalue, location)    # write text record opcode, opvalue, location
-
-        pass_1()
-        pass_2()
+                else:
+                    opvalue = "0000"
+                opcode = int(self.__OPERATORS[operator]['opcode'], 16) + int(flag_ni, 2)    # set flag n i
+                opcode = "{:02X}".format(opcode)                                            # transform to hex
+            elif operator in self.__DIRECTIVES:
+                if operator == 'BASE':
+                    self.__base = self.__Symbols[operand]
+                elif operator == 'BYTE':
+                    opvalue = constant(operand)
+                elif operator == 'END':
+                    self.__program.add_end(location)    # write end record
+                    break
+                else:
+                    pass
+            elif operator[0]=='+' and operator[1:] in self.__OPERATORS:
+                flag__xbpe="0001"
+                operator = operator[1:]
+                if operand[0] == '#':
+                    flag_ni = "01"
+                    operand = operand[1:]
+                opcode = int(self.__OPERATORS[operator]['opcode'], 16) + int(flag_ni, 2)    # set flag n i
+                opcode = "{:02X}".format(opcode)                                            # transform to hex
+                if re.match('^\d+$', operand):
+                    opvalue = "{:05X}".format(int(operand))
+                elif operand in self.__Symbols:
+                    opvalue = "{:05X}".format(self.__Symbols[operand])
+                    self.__program.add_modification(location)
+                else:
+                    opvalue = "00000"
+                opvalue = "{:X}".format(int(flag__xbpe, 2)) + opvalue
+            if opcode or opvalue:
+                self.__program.add_text(opcode, opvalue, location)    # write text record opcode, opvalue, location
 
     def __parse(self, line):
         def is_comment():
