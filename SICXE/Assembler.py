@@ -218,7 +218,7 @@ class Assembler:
         def format_type(operator):
             if operator[0] == '+' and operator[1:] in self.__OPERATORS.keys() and self.__OPERATORS[operator[1:]]['format'] == 3:
                 return 4
-            elif operator in self.__DIRECTIVES:
+            elif operator in self.__DIRECTIVES or operator[0] == '=':       # literal & directives
                 return 0
             elif operator[0] == '+':
                 raise SyntaxError("format {} cannot convert to format 4".format(self.__OPERATORS[operator[1:]]['format']))
@@ -240,12 +240,14 @@ class Assembler:
                 return [operand]
 
         def pure_operand(operand):
-            operand = re.match("^(@|#)?(?P<operand>\w+)$", operand)
+            operand = re.match("^(@|#|)?(?P<operand>\S+)$", operand)
             operand = operand.group('operand')
             if re.match("^\d+$", operand):
                 return int(operand)
             elif operand in self.__Symbols.keys():
                 return self.__Symbols[operand]
+            elif operand in self.__Literals.keys():
+                return self.__Literals[operand]
             else:
                 raise TypeError("undefined symbol: {}".format(operand))
 
@@ -269,8 +271,9 @@ class Assembler:
                 elif operator == 'END':
                     self.__program.add_end(location)    # write end record
                     break
-                else:
-                    pass
+                elif operator in self.__Literals.keys():    # Literal
+                    opvalue = constant(operator[1:])
+
             elif operator in self.__OPERATORS:
                 operands = operand_pair(operand)
                 operand = operands[0]
@@ -293,7 +296,7 @@ class Assembler:
                         operands[0] = operand[1:]
 
                     operand = pure_operand(operand)         # only number
-                    if operands[0] in self.__Symbols.keys():
+                    if operands[0] in self.__Symbols.keys() or operands[0] in self.__Literals.keys():
                         if len(operands) > 1 and operands[1] == 'X':
                             flag_x = '1'
                         if format_t == 4:
