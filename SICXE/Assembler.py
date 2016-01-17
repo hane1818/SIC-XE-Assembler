@@ -120,6 +120,9 @@ class Assembler:
             raise RuntimeError("pass_one have done before")
         loc_ctr = 0
         undef_literals = []
+        block_name = []
+        block_loc = {}
+        now_block = ""
 
         if self.__source[0]['operator'] == 'START':
             if not self.__source[0]['operand']:
@@ -130,6 +133,9 @@ class Assembler:
                 raise ValueError("START address need to be a number")
 
             loc_ctr = self.__begin_loc
+            block_name.append(self.source[0]['symbol'])
+            block_loc[self.__source[0]['symbol']] = loc_ctr
+            now_block = block_name[0]
         for line in self.__source:
             symbol, operator, operand = line['symbol'], line['operator'], line['operand']
             if symbol and symbol != '*':
@@ -190,6 +196,20 @@ class Assembler:
                     for i, literal in enumerate(undef_literals):
                         self.__source.insert(index+i+1, {'symbol': '*', 'operator': literal, 'operand': None})
                     undef_literals.clear()
+                    print(block_loc, block_name, now_block)
+                elif operator == 'USE':                             # program block
+                    block_loc[now_block] = loc_ctr
+                    if operand is None:
+                        loc_ctr = block_loc[block_name[0]]
+                        now_block = block_name[0]
+                    else:
+                        now_block = operand
+                        if operand in block_name:
+                            loc_ctr = block_loc[operand]
+                        else:
+                            block_name.append(operand)
+                            loc_ctr = 0
+                            block_loc[operand] = loc_ctr
                 else:
                     pass
             elif operator in self.__OPERATORS:
