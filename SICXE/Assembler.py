@@ -11,6 +11,8 @@ class Assembler:
         self.__title = None
         self.__base = None
         self.__program = self.Record()
+        self.__block_name = []
+        self.__block_loc = {}
 
     __REGISTERS = {
         'A': 0, 'X': 1, 'L': 2, 'PC': 8, 'SW': 9,
@@ -76,6 +78,8 @@ class Assembler:
         self.__title = None
         self.__base = None
         self.__program = self.Record()
+        self.__block_name = []
+        self.__block_loc = {}
         fin = open(filename, 'r', encoding="utf-8-sig")
         if fin:
             self.__source = fin.read().split('\n')
@@ -227,17 +231,16 @@ class Assembler:
             block_loc[x], tmp_loc = tmp_loc, block_loc[x]+tmp_loc
             for i in block_symbol[x]:
                 if i in self.__Symbols.keys():
-                    # fix symbol-defined
+                    # fix symbol-defining statement
                     if type(self.__Symbols[i]) is str:
                         label = self.__Symbols[i]
                         if label in self.__Symbols.keys():
                             self.__Symbols[i] = self.__Symbols[label]
                         else:
-                            print("Label::",label)
                             label1, label2 = re.split('\s*-\s*', label)
                             if label1 in self.__Symbols and label2 in self.__Symbols and self.__Symbols[label1]-self.__Symbols[label2] >= 0:
-                                self.__Symbols[i] = self.__Symbols[label1]-self.__Symbols[label2]
-                                print("{:04X}".format(self.__Symbols[i]))
+                                self.__Symbols[i] = "{:04X}".format(self.__Symbols[label1]-self.__Symbols[label2])
+                                #   Absolute value save by string
                             else:
                                 raise TypeError("undefined symbol: {}, {}".format(label1, label2))
                     # ------------------------
@@ -246,6 +249,8 @@ class Assembler:
                 else:
                     self.__Literals[i] += block_loc[x]
 
+        self.__block_name = block_name
+        self.__block_loc = block_loc
         return self
 
     def pass_two(self):
@@ -294,8 +299,11 @@ class Assembler:
             else:
                 raise TypeError("undefined symbol: {}".format(operand))
 
+        now_block = self.__title
         for line in self.__source:
             operator, operand, location = line['operator'], line['operand'], line['loc']
+            location += self.__block_loc[now_block]     # for program block
+            line['loc'] = location                        # for program block
             format_t = format_type(operator)
             operator = pure_operator(operator)
             flag_ni = '11'          # default n=1, i=1
@@ -316,6 +324,12 @@ class Assembler:
                     break
                 elif operator in self.__Literals.keys():    # Literal
                     opvalue = constant(operator[1:])
+                elif operator == 'USE':
+                    location -= self.__block_loc[now_block]
+                    now_block = operand if operand else self.__title
+                    location += self.__block_loc[now_block]
+                    line['loc'] = location
+                    self.__program.add_text(opcode, opvalue, location)
 
             elif operator in self.__OPERATORS:
                 operands = operand_pair(operand)
@@ -339,12 +353,18 @@ class Assembler:
                         operands[0] = operand[1:]
 
                     operand = pure_operand(operand)         # only number
+                    absolute_value = False
                     if operands[0] in self.__Symbols.keys() or operands[0] in self.__Literals.keys():
                         if len(operands) > 1 and operands[1] == 'X':
                             flag_x = '1'
+                        if type(operand) is str:
+                            absolute_value = True
+                            operand = int(operand, 16)
+                            self.__Symbols[operands[0]] = operand  # change to number after use
                         if format_t == 4:
-                            opvalue = "{:06X}".format(operand)
-                            self.__program.add_modification(location)
+                            if not absolute_value:
+                                opvalue = "{:06X}".format(operand)
+                                self.__program.add_modification(location)
                         elif -2048 <= operand-location-format_t < 2048:       # PC counter
                             flag_p = '1'
                             flag_xbpe = flag_x + flag_b + flag_p + flag_e
@@ -440,6 +460,9 @@ class Assembler:
                 self.text[-1] = self.text[-1][:7] + "{:02X}".format(text_len) + self.text[-1][9:]
                 self.text[-1] += object_code
                 self.now_loc += len(object_code) // 2
+
+            if not int(self.text[-1][7:9], 16):
+                self.text.pop()
 
         def __str__(self):
             string = [self.header] + self.text + self.modification + [self.end]
